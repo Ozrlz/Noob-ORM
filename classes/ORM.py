@@ -62,8 +62,8 @@ class ORM():
 		kwvals = get_keys_and_vals(**kwargs)
 		table_desc = do_assembly_table(kwvals[0], kwvals[1] ) 
 		self.cr.execute(
-			'CREATE TABLE IF NOT EXISTS ' + table_name + ' ' +
-			table_desc
+			"CREATE TABLE IF NOT EXISTS %s %s" %
+			(table_name, table_desc)
 		)
 		self.con.commit()
 
@@ -75,9 +75,11 @@ class ORM():
 		"""
 		#print (					
 		self.cr.execute(
-			'INSERT INTO ' + tablename + 
-			' (' + list_to_string(get_keys(**kwargs)).replace('\'', '') + ') ' +
-			'VALUES (' + list_to_string(get_values(**kwargs)) + ')'
+			"INSERT INTO %s ( %s ) VALUES ( %s )" % 
+			(tablename,
+			list_to_string(get_keys(**kwargs)).replace('\'', ''),
+			list_to_string(get_values(**kwargs))
+			)
 		)
 		self.con.commit()
 
@@ -88,17 +90,34 @@ class ORM():
 		"""
 		table_desc = list_to_string(args).replace('\'', '')
 		self.cr.execute(
-			'SELECT ' + table_desc + 'FROM ' + tablename
+			"SELECT %s FROM %s" %
+			(table_desc, tablename)
 		)
 		return self.cr.fetchall()
 
 	def do_delete(self, tablename, **kwargs):
 		val = list_to_string([ get_values(**kwargs)[0] ] )
 		key = get_keys(**kwargs)[0]
-		query = ("DELETE FROM " + tablename + " WHERE " + 
-		key + " = " + val )
+		query = ( "DELETE FROM %s WHERE %s = %s" %
+			(tablename, key, val) )
 		self.cr.execute(query)
 		#print (query)
+		self.con.commit()
+
+	def do_describe_tables(self):
+		self.cr.execute("SELECT * FROM sqlite_master WHERE type='table';")
+		return self.cr.fetchall()
+
+	def do_update(self, tablename, **kwargs):
+		set_val = list_to_string(get_values(**kwargs)[0:1])
+		where_val = list_to_string(get_values(**kwargs)[1:2])
+		set_key = list_to_string(get_keys(**kwargs)[0:1]).replace('\'', '')
+		where_key = list_to_string(get_keys(**kwargs)[1:2]).replace('\'', '')
+
+		query = ("UPDATE %s SET %s = %s WHERE %s == %s" %
+				(tablename, set_key, set_val, where_key, where_val) 
+				)
+		self.cr.execute(query)
 		self.con.commit()
 
 
