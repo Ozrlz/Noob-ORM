@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-import sqlite3
+import psycopg2
 import sys
+import json
 
 #Constants
-DB_NAME = sys.argv[1] if len(sys.argv) == 2 else 'test_default.db'
+DB_NAME = sys.argv[1] if len(sys.argv) == 2 else 'test'
 
 def get_keys_and_vals(**kwargs):
 	keys = list(kwargs.keys() )
@@ -15,6 +16,24 @@ def get_keys(**kwargs):
 
 def get_values(**kwargs):
 	return list(kwargs.values() )
+
+def do_get_json(filename='SuperHiddenFile.exe'):
+	return json.load(open(filename, 'r'))
+
+def do_assembly_connection_string(vals={}):
+	"""
+	Vals is a dictionary with the following format:
+		usr_name, usr_passwd, psql_port, psql_db (db_name), hostname
+	The string gotta follow the same format
+		"dbname='' user=''' password='' host='' port=''"
+	"""
+	#vals = do_get_json('SuperHiddenFile.exe')
+	connection_string = ("dbname='%s' user='%s' password='%s' host='%s' port='%s'" %
+		(vals['psql_db'], vals['usr_name'], vals['usr_passwd'],
+		vals['hostname'], vals['psql_port'])
+		)
+	return connection_string
+
 
 def do_assembly_table(keys, values):
 	table_desc = '( '
@@ -49,7 +68,7 @@ def list_to_string(list_):
 
 class ORM():
 	def __init__(self):
-		self.con = sqlite3.connect(DB_NAME)
+		self.con = psycopg2.connect(do_assembly_connection_string(do_get_json()))
 		self.cr = self.con.cursor()
 
 	def do_create_table(self, table_name='default_table', **kwargs):
@@ -105,7 +124,7 @@ class ORM():
 		self.con.commit()
 
 	def do_describe_tables(self):
-		self.cr.execute("SELECT * FROM sqlite_master WHERE type='table';")
+		self.cr.execute("select * from pg_class where relkind='r' and relname !~ '^(pg_|sql_)';")
 		return self.cr.fetchall()
 
 	def do_update(self, tablename, **kwargs):
