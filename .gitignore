@@ -9,6 +9,9 @@ __pycache__/
 # sqlite databases
 *.db
 
+#Env file
+SuperHiddenFile.exe
+
 # Distribution / packaging
 .Python
 env/
