@@ -2,6 +2,7 @@
 import psycopg2
 import sys
 import json
+from pdb import set_trace as debug
 
 #Constants
 DB_NAME = sys.argv[1] if len(sys.argv) == 2 else 'test'
@@ -33,6 +34,31 @@ def do_assembly_connection_string(vals={}):
 		vals['hostname'], vals['psql_port'])
 		)
 	return connection_string
+
+def do_replace_chars(string, chars_to_rep="' ", key=''):
+	for char in chars_to_rep:
+		if char in string:
+			string = string.replace(char, key)
+	return string
+
+def do_assembly_where(connector='or', **kwargs):
+	# debug()
+	vals = get_values(**kwargs)
+	keys = get_keys(**kwargs)
+	vals = do_replace_chars(list_to_string(vals), chars_to_rep=' ').split(',')
+	keys = do_replace_chars(list_to_string(keys)).split(',')
+	and_connector = (len(keys) == 1 ) and '' or ' %s ' % (connector)
+	where_desc = 'WHERE '
+	for index in range(len(vals)):
+		where_desc += (
+			"%s = %s" %
+			(keys[index], vals[index])
+			)
+		if index != len(vals)-1:
+			where_desc += and_connector
+	# debug()
+	return where_desc
+	# for index in range(len(vals)):
 
 
 def do_assembly_table(keys, values):
@@ -114,6 +140,22 @@ class ORM():
 		)
 		return self.cr.fetchall()
 
+	def do_query_where(self, tablename, connector='or', *args, **kwargs):
+		"""
+		Queries into the given table, with the given columns (as *args).
+		Returns the fetched query filtered by the columns.
+		E.g.
+			do_query_where('issues', 'or', 'name', 'descr', name='name')
+		"""
+		where_str = do_assembly_where(connector=connector, **kwargs)
+		columns = do_replace_chars(list_to_string(list(args)), chars_to_rep="'")
+		# debug()
+		self.cr.execute ("SELECT %s FROM %s %s" %
+				(columns, tablename, where_str))
+
+		return self.cr.fetchall()
+
+
 	def do_delete(self, tablename, **kwargs):
 		val = list_to_string([ get_values(**kwargs)[0] ] )
 		key = get_keys(**kwargs)[0]
@@ -146,6 +188,7 @@ if __name__ == '__main__':
 	print (DB_NAME)
 	#print (get_keys(name='nam nam', nom='nom nom nom') )
 	#print (get_values(name='nam nam', nom='nom nom nom') )
-	with ORMPackageResource() as orm_instance:
-		#orm_instance.do_insert('animals', name='Benito', age=2)
-		pass
+	# with ORMPackageResource() as orm_instance:
+	# 	# orm_instance.do_insert('animals', name='Benito', age=2)
+	# 	debug()
+	# 	# pass
